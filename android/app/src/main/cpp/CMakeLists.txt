@@ -26,6 +26,11 @@ project("app")
 # used in the AndroidManifest.xml file.
 file(GLOB_RECURSE SRC_LIST *.cpp *.hpp *.h)
 
+#4.设置第三方库头库所在位置
+link_directories(${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/)
+link_libraries(MNN_Express.so MNN.so opencv_java4.so)
+
+
 add_library(${CMAKE_PROJECT_NAME} SHARED
         # List C/C++ source files with relative paths to this CMakeLists.txt.
         native-lib.cpp
