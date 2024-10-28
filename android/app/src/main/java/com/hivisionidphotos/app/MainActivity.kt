@@ -42,12 +42,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+
+
+
     /**
      * A native method that is implemented by the 'app' native library,
      * which is packaged with this application.
      */
     private external fun stringFromJNI(): String
     external fun humanMatch(imagePath:String,modelPath:String,outPath:String):String
+    external fun generationPic(input_image:String,
+                               output_image:String,segment_model:String,out_size_kb:Int,thread_num:Int,
+                               background_color_r:Int,background_color_g:Int,background_color_b:Int,
+                               out_images_width:Int,out_images_height:Int,head_measure_ratio:Float,
+                               face_model:Int,layout_photos:Boolean):Int
 
     companion object {
         // Used to load the 'app' library on application startup.

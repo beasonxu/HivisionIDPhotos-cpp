@@ -43,3 +43,114 @@ Java_com_hivisionidphotos_app_MainActivity_humanMatch(JNIEnv *env, jobject jobje
 
     return env->NewStringUTF(outStr.c_str());
 }
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_hivisionidphotos_app_MainActivity_generationPic(JNIEnv *env, jobject jobject,jstring j_input_image,
+    jstring j_output_image,jstring j_segment_model,jint j_out_size_kb,int j_thread_num,
+    jint j_background_color_r,jint j_background_color_g,jint j_background_color_b,
+    jint j_out_images_width,jint j_out_images_height,jfloat j_head_measure_ratio,
+    jint j_face_model,jboolean j_layout_photos){
+    const char* char_input_image;
+    char_input_image = env->GetStringUTFChars(j_input_image, 0);
+    std::string input_image(char_input_image);
+
+    const char* char_output_image;
+    char_output_image = env->GetStringUTFChars(j_output_image, 0);
+    std::string output_image(char_output_image);
+
+    const char* char_segment_model;
+    char_segment_model = env->GetStringUTFChars(j_segment_model, 0);
+    std::string segment_model(char_segment_model);
+    int out_size_kb = j_out_size_kb;
+    int thread_num =j_thread_num;
+    int background_color_r = j_background_color_r;
+    int background_color_g = j_background_color_g;
+    int background_color_b = j_background_color_b;
+    int out_images_width = j_out_images_width;
+    int out_images_height = j_out_images_height;
+    float head_measure_ratio = j_head_measure_ratio;
+    int face_model = j_face_model;
+    bool layout_photos = j_layout_photos;
+
+
+
+    env->ReleaseStringUTFChars(j_input_image, char_input_image);
+    env->ReleaseStringUTFChars(j_output_image, char_output_image);
+    env->ReleaseStringUTFChars(j_segment_model, char_segment_model);
+
+
+    auto start_project = std::chrono::high_resolution_clock::now();
+
+    std::string face_model_path = "./model";
+
+    matting_params human_matting_params;
+    if(head_measure_ratio>1||head_measure_ratio<0){
+        printf("option value is invalid: --head_measure_ratio %f",head_measure_ratio);
+        return -1;
+    }
+
+#include <chrono>
+
+    const char* modelPathCStr = segment_model.c_str();
+    cv::Vec3b newBackgroundColor(background_color_b, background_color_g, background_color_r);
+    auto start_face_1 = std::chrono::high_resolution_clock::now();
+    LFFD* face_detector = new LFFD(face_model_path, face_model, thread_num);
+    auto end_face1 = std::chrono::high_resolution_clock::now();
+    auto duration_face1= std::chrono::duration_cast<std::chrono::milliseconds>(end_face1 - start_face_1);
+
+    cv::Mat image = cv::imread(input_image, cv::IMREAD_COLOR);
+
+    auto start = std::chrono::high_resolution_clock::now();
+    cv::Mat bgra_img=human_matting(modelPathCStr, image,thread_num);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    std::cout << " 人像分割模型加载加推理耗时 " << duration.count() << "ms." << std::endl;
+
+    cv::Mat add_background_img = addBackground(bgra_img, newBackgroundColor);
+    cv::cvtColor(add_background_img, add_background_img, cv::COLOR_BGRA2BGR);
+
+    std::vector<FaceInfo > finalBox;
+    auto start_face = std::chrono::high_resolution_clock::now();
+    face_detector->detect(add_background_img, finalBox, add_background_img.rows, add_background_img.cols);
+    auto end_face = std::chrono::high_resolution_clock::now();
+    auto duration_face = std::chrono::duration_cast<std::chrono::milliseconds>(end_face - start_face);
+    std::cout << " c++人脸检测耗时 " << duration_face.count() + duration_face1.count()-50 << "ms." << std::endl;
+    if (finalBox.size() > 1) {
+        printf("输入人脸不为 1");
+        return -2;
+    }
+    else {
+        human_matting_params.face_info = finalBox[0];
+    }
+    free(face_detector);
+    auto start_photo = std::chrono::high_resolution_clock::now();
+    cv::Mat hd_result = photo_adjust(human_matting_params, add_background_img, out_images_height,out_images_width,background_color_r,background_color_g,background_color_b, head_measure_ratio);
+    if(out_size_kb>0){
+        resizeImageToKB(hd_result,output_image+"result_kb.png",out_size_kb);
+    }
+    cv::Mat standard_result;
+    cv::Size standard_size(out_images_width, out_images_height);
+    cv::resize(hd_result, standard_result, standard_size);
+    cv::imwrite(output_image +"result_hd.png", hd_result);
+    cv::imwrite(output_image+"result_standard.png", standard_result);
+    if(layout_photos){
+        auto result_typography_arr =generate_layout_photo(out_images_height,out_images_width);
+        cv::Mat result_layout_image = generate_layout_image(
+                standard_result,
+                std::get<0>(result_typography_arr),
+                std::get<1>(result_typography_arr),
+                out_images_width,
+                out_images_height
+        );
+        cv::imwrite( output_image+"layout_photo.png", result_layout_image);
+    }
+    auto end_phot = std::chrono::high_resolution_clock::now();
+    auto duration_photo = std::chrono::duration_cast<std::chrono::milliseconds>(end_phot - start_photo);
+    std::cout << " c++图像后处理耗时 " << duration_photo.count() << "ms." << std::endl;
+
+    auto end_project= std::chrono::high_resolution_clock::now();
+    auto duration_project = std::chrono::duration_cast<std::chrono::milliseconds>(end_project - start_project);
+    std::cout << " c++项目耗时 " << duration_project.count()-50 << "ms." << std::endl;
+    return 0;
+}
