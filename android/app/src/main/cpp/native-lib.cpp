@@ -47,7 +47,7 @@ Java_com_hivisionidphotos_app_MainActivity_humanMatch(JNIEnv *env, jobject jobje
 extern "C"
 JNIEXPORT jint JNICALL
 Java_com_hivisionidphotos_app_MainActivity_generationPic(JNIEnv *env, jobject jobject,jstring j_input_image,
-    jstring j_output_image,jstring j_segment_model,jint j_out_size_kb,int j_thread_num,
+    jstring j_output_image,jstring j_model_path,jstring j_segment_model,jint j_out_size_kb,int j_thread_num,
     jint j_background_color_r,jint j_background_color_g,jint j_background_color_b,
     jint j_out_images_width,jint j_out_images_height,jfloat j_head_measure_ratio,
     jint j_face_model,jboolean j_layout_photos){
@@ -58,6 +58,10 @@ Java_com_hivisionidphotos_app_MainActivity_generationPic(JNIEnv *env, jobject jo
     const char* char_output_image;
     char_output_image = env->GetStringUTFChars(j_output_image, 0);
     std::string output_image(char_output_image);
+
+    const char* char_model_path;
+    char_model_path = env->GetStringUTFChars(j_output_image, 0);
+    std::string model_path(char_model_path);
 
     const char* char_segment_model;
     char_segment_model = env->GetStringUTFChars(j_segment_model, 0);
@@ -77,12 +81,10 @@ Java_com_hivisionidphotos_app_MainActivity_generationPic(JNIEnv *env, jobject jo
 
     env->ReleaseStringUTFChars(j_input_image, char_input_image);
     env->ReleaseStringUTFChars(j_output_image, char_output_image);
+    env->ReleaseStringUTFChars(j_model_path, char_model_path);
     env->ReleaseStringUTFChars(j_segment_model, char_segment_model);
 
 
-    auto start_project = std::chrono::high_resolution_clock::now();
-
-    std::string face_model_path = "./model";
 
     matting_params human_matting_params;
     if(head_measure_ratio>1||head_measure_ratio<0){
@@ -95,7 +97,7 @@ Java_com_hivisionidphotos_app_MainActivity_generationPic(JNIEnv *env, jobject jo
     const char* modelPathCStr = segment_model.c_str();
     cv::Vec3b newBackgroundColor(background_color_b, background_color_g, background_color_r);
     auto start_face_1 = std::chrono::high_resolution_clock::now();
-    LFFD* face_detector = new LFFD(face_model_path, face_model, thread_num);
+    LFFD* face_detector = new LFFD(model_path, face_model, thread_num);
     auto end_face1 = std::chrono::high_resolution_clock::now();
     auto duration_face1= std::chrono::duration_cast<std::chrono::milliseconds>(end_face1 - start_face_1);
 
@@ -105,7 +107,7 @@ Java_com_hivisionidphotos_app_MainActivity_generationPic(JNIEnv *env, jobject jo
     cv::Mat bgra_img=human_matting(modelPathCStr, image,thread_num);
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << " 人像分割模型加载加推理耗时 " << duration.count() << "ms." << std::endl;
+
 
     cv::Mat add_background_img = addBackground(bgra_img, newBackgroundColor);
     cv::cvtColor(add_background_img, add_background_img, cv::COLOR_BGRA2BGR);
@@ -119,8 +121,10 @@ Java_com_hivisionidphotos_app_MainActivity_generationPic(JNIEnv *env, jobject jo
     if (finalBox.size() > 1) {
         printf("输入人脸不为 1");
         return -2;
-    }
-    else {
+    }else if (finalBox.empty()){
+        printf("检测不到人脸");
+        return -3;
+    }else {
         human_matting_params.face_info = finalBox[0];
     }
     free(face_detector);
@@ -145,12 +149,6 @@ Java_com_hivisionidphotos_app_MainActivity_generationPic(JNIEnv *env, jobject jo
         );
         cv::imwrite( output_image+"layout_photo.png", result_layout_image);
     }
-    auto end_phot = std::chrono::high_resolution_clock::now();
-    auto duration_photo = std::chrono::duration_cast<std::chrono::milliseconds>(end_phot - start_photo);
-    std::cout << " c++图像后处理耗时 " << duration_photo.count() << "ms." << std::endl;
 
-    auto end_project= std::chrono::high_resolution_clock::now();
-    auto duration_project = std::chrono::duration_cast<std::chrono::milliseconds>(end_project - start_project);
-    std::cout << " c++项目耗时 " << duration_project.count()-50 << "ms." << std::endl;
     return 0;
 }

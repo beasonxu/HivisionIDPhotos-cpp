@@ -29,14 +29,15 @@ class MainActivity : AppCompatActivity() {
 
         binding.btn1.setOnClickListener {
             GlobalScope.launch(Dispatchers.IO) {
-                //copyAllAssetsToExternalStorage(this@MainActivity)
+                copyAllAssetsToExternalStorage(this@MainActivity)
                 val dir = this@MainActivity.getExternalFilesDir(DIRECTORY_DOWNLOADS)?.absolutePath+"/cache"
-                val imagePath = "$dir/test.jpg"
+                val imagePath = "$dir/WechatIMG30.jpg"
                 val modelPath = "$dir/modnet_photographic_portrait_matting.mnn"
                 val outPath = dir
 
-                val result = humanMatch(imagePath,modelPath,outPath)
-                Log.d("result",result)
+                val result = generationPic(imagePath,outPath,dir,modelPath,0,4,255,0,0,
+                    295,413,0.35F,5,true)
+                Log.d("result", result.toString())
             }
 
         }
@@ -52,7 +53,7 @@ class MainActivity : AppCompatActivity() {
     private external fun stringFromJNI(): String
     external fun humanMatch(imagePath:String,modelPath:String,outPath:String):String
     external fun generationPic(input_image:String,
-                               output_image:String,segment_model:String,out_size_kb:Int,thread_num:Int,
+                               output_image:String,model_path:String,segment_model:String,out_size_kb:Int,thread_num:Int,
                                background_color_r:Int,background_color_g:Int,background_color_b:Int,
                                out_images_width:Int,out_images_height:Int,head_measure_ratio:Float,
                                face_model:Int,layout_photos:Boolean):Int
