@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "HivisionIDPhotos"
 include(":app")
-include(":sdk")
+//include(":sdk")

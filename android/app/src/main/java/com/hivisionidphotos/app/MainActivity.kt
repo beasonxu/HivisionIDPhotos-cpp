@@ -29,14 +29,13 @@ class MainActivity : AppCompatActivity() {
 
         binding.btn1.setOnClickListener {
             GlobalScope.launch(Dispatchers.IO) {
-                copyAllAssetsToExternalStorage(this@MainActivity)
+//                copyAllAssetsToExternalStorage(this@MainActivity)
                 val dir = this@MainActivity.getExternalFilesDir(DIRECTORY_DOWNLOADS)?.absolutePath+"/cache"
-                val imagePath = "$dir/WechatIMG30.jpg"
-                val modelPath = "$dir/modnet_photographic_portrait_matting.mnn"
+                val imagePath = "$dir/test.jpg"
+                val modelPath = "$dir/model.onnx"
                 val outPath = dir
 
-                val result = generationPic(imagePath,outPath,dir,modelPath,0,4,255,0,0,
-                    295,413,0.35F,5,true)
+                val result = humanMatch(imagePath,modelPath,dir)
                 Log.d("result", result.toString())
             }
 

@@ -18,7 +18,9 @@ android {
 
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            version = "27.2.12479018"
         }
+
     }
 
     buildTypes {
@@ -46,6 +48,7 @@ android {
     buildFeatures {
         viewBinding = true
     }
+    ndkVersion = "27.2.12479018"
 }
 
 dependencies {
